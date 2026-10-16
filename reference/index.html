@@ -643,6 +643,18 @@ footer{border-top:2px solid var(--ink)}
 .tile{text-align:left;font-family:var(--sans);cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;width:100%}
 .tile .n{margin-bottom:auto;padding-bottom:30px}
 .tile .n{margin-bottom:34px;padding-bottom:0}
+</style><style id="nv-css">#nv-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:150;display:flex;gap:4px;align-items:center;padding:5px;background:#14122B;border-radius:999px;box-shadow:0 6px 22px rgba(20,18,43,.35)}
+#nv-bar button{appearance:none;border:0;background:transparent;color:#fff;font:600 14px/1 "Hanken Grotesk","Hanken",system-ui,sans-serif;min-height:44px;min-width:44px;padding:0 14px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#nv-bar button span{font-size:22px;line-height:1}
+#nv-bar button:hover:not(:disabled){background:rgba(255,255,255,.14)}
+#nv-bar button:active:not(:disabled){background:#FFD60A;color:#14122B}
+#nv-bar button:disabled{opacity:.32;cursor:default}
+#nv-bar button:focus-visible{outline:2px solid #FFD60A;outline-offset:1px}
+#nv-bar #nv-top{background:#FFD60A;color:#14122B}
+#nv-bar [hidden]{display:none}
+body{padding-bottom:84px}
+@media(max-width:420px){#nv-bar button{padding:0 11px}#nv-bar button i{display:none}}
+@media print{#nv-bar{display:none}}
 </style><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2D3BE8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Italiano"></head>
 <body>
 <div class="topbar"><div class="wrap topbar-in">
@@ -1474,7 +1486,7 @@ function show(n){
   const el = document.getElementById("page-"+n); if(el) el.classList.add("on");
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on", t.dataset.p===String(n)));
   window.scrollTo({top:0, behavior:"instant"});
-  if(location.hash !== "#p"+n) history.replaceState(null,"","#p"+n);
+  if(window.__nav) window.__nav.push("#p"+n);
 }
 document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>show(t.dataset.p)));
 document.querySelectorAll("[data-go]").forEach(t=>t.addEventListener("click",()=>show(t.dataset.go)));
@@ -1629,7 +1641,7 @@ function showT(id,noscroll){
   if(!panes[id]) id="map";
   for(var k in panes){panes[k].hidden=(k!==id);}
   pills.forEach(function(b){var on=b.getAttribute("data-tense")===id; if(on) b.setAttribute("aria-current","true"); else b.removeAttribute("aria-current"); if(on&&b.scrollIntoView){try{b.scrollIntoView({block:"nearest",inline:"center"});}catch(e){}}});
-  try{history.replaceState(null,"",id==="map"?"#p3":"#t-"+id);}catch(e){}
+  if(window.__nav) window.__nav.push(id==="map"?"#p3":"#t-"+id);
   if(!noscroll){var m=document.getElementById("page-3"); window.scrollTo({top:m?m.offsetTop:0,behavior:"instant"});}
   document.dispatchEvent(new CustomEvent("tn:shown",{detail:id}));
 }
@@ -2022,6 +2034,81 @@ document.addEventListener("click",function(e){
     timer=setInterval(function(){ var left=Math.max(0,total-Math.floor((performance.now()-t0)/1000)); clock.textContent=fmt(left); if(left<=0){ clock.classList.add("end"); stop(false); } },250); }); });
   document.getElementById("sp-stop").addEventListener("click",function(){ stop(true); });
 })();
+})();
+</script>
+<script id="nv-js">(function(){
+"use strict";
+try{history.scrollRestoration="manual";}catch(e){}
+var KEY="itref.last", i=0, busy=false;
+var st=history.state; if(st&&typeof st.i==="number") i=st.i; else { try{history.replaceState({i:0,y:0},"",location.href);}catch(e){} }
+var maxI=i, lastY=0;
+window.addEventListener("scroll",function(){lastY=window.pageYOffset;},{passive:true});
+function cur(){var h=location.hash||"#p0"; return h;}
+function save(){try{history.replaceState({i:i,y:lastY},"",location.href);}catch(e){}}
+function ui(){
+  var b=document.getElementById("nv-back"),f=document.getElementById("nv-fwd"),h=document.getElementById("nv-home"),t=document.getElementById("nv-top");
+  if(!b) return;
+  b.disabled = i<=0;
+  f.disabled = i>=maxI;
+  var onHub = (cur()==="#p0"||cur()==="");
+  h.disabled = onHub;
+  t.hidden = window.pageYOffset<400;
+}
+window.__nav={
+  push:function(hash){
+    if(busy||location.hash===hash) return;
+    save();
+    i++; maxI=i;
+    try{history.pushState({i:i,y:0},"",hash);}catch(e){}
+    try{localStorage.setItem(KEY,hash);}catch(e){}
+    ui();
+  }
+};
+function go(hash,y){
+  busy=true;
+  try{
+    var m=/^#p(\d+)$/.exec(hash), t=/^#t-([a-z-]+)$/.exec(hash);
+    if(t&&typeof window.tnShow==="function"){ if(typeof show==="function") show(3); window.tnShow(t[1],true); }
+    else if(m){ if(typeof show==="function") show(m[1]); if(m[1]==="3"&&typeof window.tnShow==="function") window.tnShow("map",true); }
+    else if(typeof show==="function") show(0);
+  }catch(e){}
+  busy=false;
+  window.scrollTo({top:y||0,behavior:"instant"});
+}
+window.addEventListener("popstate",function(e){
+  var s=e.state; if(s&&typeof s.i==="number"){ i=s.i; if(i>maxI) maxI=i; } 
+  go(cur(), s&&s.y); var yy=s&&s.y||0; requestAnimationFrame(function(){window.scrollTo({top:yy,behavior:"instant"});});
+  try{localStorage.setItem(KEY,cur());}catch(x){}
+  ui();
+});
+/* bar */
+var bar=document.createElement("div"); bar.id="nv-bar"; bar.setAttribute("role","navigation"); bar.setAttribute("aria-label","Page navigation");
+bar.innerHTML='<button id="nv-back" type="button" aria-label="Back"><span>‹</span><i>Back</i></button>'+
+ '<button id="nv-home" type="button" aria-label="Home"><span>⌂</span><i>Home</i></button>'+
+ '<button id="nv-fwd" type="button" aria-label="Forward"><i>Forward</i><span>›</span></button>'+
+ '<button id="nv-top" type="button" aria-label="Scroll to top" hidden><span>↑</span></button>';
+document.body.appendChild(bar);
+document.getElementById("nv-back").addEventListener("click",function(){ if(i>0) history.back(); });
+document.getElementById("nv-fwd").addEventListener("click",function(){ if(i<maxI) history.forward(); });
+document.getElementById("nv-home").addEventListener("click",function(){ if(typeof show==="function") show(0); });
+document.getElementById("nv-top").addEventListener("click",function(){ window.scrollTo({top:0,behavior:"smooth"}); });
+var tick=false; window.addEventListener("scroll",function(){ if(tick) return; tick=true; requestAnimationFrame(function(){tick=false; ui();}); },{passive:true});
+/* keyboard: Alt+Left / Alt+Right, Esc = back (when no dialog/input) */
+document.addEventListener("keydown",function(e){
+  var tg=e.target&&e.target.tagName; if(tg==="INPUT"||tg==="TEXTAREA"||tg==="SELECT") return;
+  if(e.altKey&&e.key==="ArrowLeft"){ e.preventDefault(); if(i>0) history.back(); }
+  else if(e.altKey&&e.key==="ArrowRight"){ e.preventDefault(); if(i<maxI) history.forward(); }
+});
+/* edge swipe from the left edge = back (touch only, ignores scrollable tables) */
+(function(){var sx=0,sy=0,ok=false;
+  document.addEventListener("touchstart",function(e){var t=e.touches[0]; sx=t.clientX; sy=t.clientY; ok=sx<24&&e.touches.length===1;},{passive:true});
+  document.addEventListener("touchend",function(e){ if(!ok) return; ok=false; var t=e.changedTouches[0]; if(t.clientX-sx>70&&Math.abs(t.clientY-sy)<45&&i>0) history.back(); },{passive:true});
+})();
+/* resume where you left off when launched as an installed app with no hash */
+var standalone=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||window.navigator.standalone===true;
+if(standalone&&!location.hash){ var last=null; try{last=localStorage.getItem(KEY);}catch(e){} if(last&&last!=="#p0"){ try{history.replaceState({i:0,y:0},"",last);}catch(e){} go(last,0); } }
+else { try{localStorage.setItem(KEY,cur());}catch(e){} }
+ui();
 })();
 </script>
 </body>
