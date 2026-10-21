@@ -653,8 +653,35 @@ footer{border-top:2px solid var(--ink)}
 #nv-bar #nv-top{background:#FFD60A;color:#14122B}
 #nv-bar [hidden]{display:none}
 body{padding-bottom:84px}
-@media(max-width:420px){#nv-bar button{padding:0 11px}#nv-bar button i{display:none}}
-@media print{#nv-bar{display:none}}
+#nv-bar #nv-menu-btn{background:#2D3BE8}
+#nv-bar #nv-menu-btn:hover{background:#4251F0}
+@media(max-width:560px){#nv-bar button{padding:0 11px}#nv-bar button i{display:none}}
+body.nv-lock{overflow:hidden}
+#nv-menu{position:fixed;inset:0;z-index:170;font-family:"Hanken Grotesk","Hanken",system-ui,sans-serif}
+#nv-menu[hidden]{display:none}
+#nv-menu .nv-bd{position:absolute;inset:0;background:rgba(20,18,43,.55)}
+#nv-menu .nv-panel{position:absolute;left:50%;bottom:0;width:min(640px,100%);max-height:84vh;max-height:84dvh;display:flex;flex-direction:column;background:#14122B;color:#fff;border-radius:22px 22px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.4);padding-bottom:env(safe-area-inset-bottom,0px);transform:translateX(-50%);animation:nvUp .22s ease-out}
+@keyframes nvUp{from{transform:translate(-50%,28px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+@media(prefers-reduced-motion:reduce){#nv-menu .nv-panel{animation:none}}
+#nv-menu .nv-head{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 4px 20px}
+#nv-menu .nv-head b{font-size:21px;font-weight:800;letter-spacing:-.01em;color:#FFD60A}
+#nv-menu button{appearance:none;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#nv-menu .nv-x{border:0;background:rgba(255,255,255,.1);color:#fff;width:44px;height:44px;border-radius:50%;font-size:26px;line-height:1}
+#nv-menu .nv-acts{display:flex;gap:8px;padding:8px 16px 12px}
+#nv-menu .nv-acts button{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid #5A57A0;background:transparent;color:#D9DBFF;font-weight:650;font-size:14px}
+#nv-menu .nv-acts button[aria-pressed="true"]{background:#2D3BE8;border-color:#2D3BE8;color:#fff}
+#nv-menu .nv-acts button:hover{border-color:#FFD60A;color:#fff}
+#nv-menu .nv-acts [hidden]{display:none}
+#nv-menu .nv-list{display:grid;grid-template-columns:1fr;gap:6px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:2px 12px 16px}
+@media(min-width:520px){#nv-menu .nv-list{grid-template-columns:1fr 1fr}}
+#nv-menu .nv-item{display:flex;align-items:center;gap:12px;min-height:50px;padding:0 14px;border:0;border-radius:14px;background:rgba(255,255,255,.07);color:#fff;font-weight:650;font-size:15.5px;line-height:1.2;text-align:left}
+#nv-menu .nv-item em{font-style:normal;flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.13);font-size:13px;font-weight:800}
+#nv-menu .nv-item:hover{background:rgba(255,255,255,.15)}
+#nv-menu .nv-item.cur{background:#FFD60A;color:#14122B}
+#nv-menu .nv-item.cur em{background:rgba(20,18,43,.16)}
+#nv-menu button:focus-visible{outline:2px solid #FFD60A;outline-offset:2px}
+#nv-menu .nv-item.cur:focus-visible{outline-color:#fff}
+@media print{#nv-bar,#nv-menu{display:none}}
 .srch-r mark{background:#FFD60A;color:#14122B;border-radius:3px;padding:0 2px}
 </style><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2D3BE8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Italiano"></head>
 <body>
@@ -2098,6 +2125,7 @@ function go(hash,y){
   window.scrollTo({top:y||0,behavior:"instant"});
 }
 window.addEventListener("popstate",function(e){
+  if(typeof closeMenu==="function") closeMenu(false);
   var s=e.state; if(s&&typeof s.i==="number"){ i=s.i; if(i>maxI) maxI=i; } 
   go(cur(), s&&s.y); var yy=s&&s.y||0; requestAnimationFrame(function(){window.scrollTo({top:yy,behavior:"instant"});});
   try{localStorage.setItem(KEY,cur());}catch(x){}
@@ -2107,6 +2135,7 @@ window.addEventListener("popstate",function(e){
 var bar=document.createElement("div"); bar.id="nv-bar"; bar.setAttribute("role","navigation"); bar.setAttribute("aria-label","Page navigation");
 bar.innerHTML='<button id="nv-back" type="button" aria-label="Back"><span>‹</span><i>Back</i></button>'+
  '<button id="nv-home" type="button" aria-label="Home"><span>⌂</span><i>Home</i></button>'+
+ '<button id="nv-menu-btn" type="button" aria-label="Open menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="nv-menu"><span>☰</span><i>Menu</i></button>'+
  '<button id="nv-fwd" type="button" aria-label="Forward"><i>Forward</i><span>›</span></button>'+
  '<button id="nv-top" type="button" aria-label="Scroll to top" hidden><span>↑</span></button>';
 document.body.appendChild(bar);
@@ -2114,6 +2143,67 @@ document.getElementById("nv-back").addEventListener("click",function(){ if(i>0) 
 document.getElementById("nv-fwd").addEventListener("click",function(){ if(i<maxI) history.forward(); });
 document.getElementById("nv-home").addEventListener("click",function(){ if(typeof show==="function") show(0); });
 document.getElementById("nv-top").addEventListener("click",function(){ window.scrollTo({top:0,behavior:"smooth"}); });
+/* menu sheet: the same sections as the top menu, in a bottom sheet (the top menu itself is untouched) */
+var sheet=document.createElement("div"); sheet.id="nv-menu"; sheet.hidden=true;
+sheet.innerHTML='<div class="nv-bd"></div><div class="nv-panel" role="dialog" aria-modal="true" aria-label="Menu">'+
+ '<div class="nv-head"><b>Menu</b><button type="button" class="nv-x" aria-label="Close menu">×</button></div>'+
+ '<div class="nv-acts"><button type="button" id="nv-m-search">Search</button><button type="button" id="nv-m-audio" aria-pressed="false">Audio</button></div>'+
+ '<div class="nv-list"></div></div>';
+document.body.appendChild(sheet);
+var menuBtn=document.getElementById("nv-menu-btn"), mList=sheet.querySelector(".nv-list");
+function mBuild(){
+  var on=document.querySelector(".tab.on"), cp=on?on.getAttribute("data-p"):"0";
+  mList.textContent="";
+  [].forEach.call(document.querySelectorAll(".topbar .tab"),function(t){
+    var p=t.getAttribute("data-p"), txt=t.textContent.trim(), m=/^(\d+)\.\s*(.*)$/.exec(txt);
+    var b=document.createElement("button"); b.type="button"; b.className="nv-item"; b.setAttribute("data-p",p);
+    var n=document.createElement("em"); n.textContent=m?m[1]:"⌂";
+    var s=document.createElement("span"); s.textContent=m?m[2]:"Home";
+    b.appendChild(n); b.appendChild(s);
+    if(p===cp){ b.className+=" cur"; b.setAttribute("aria-current","page"); }
+    mList.appendChild(b);
+  });
+}
+function mActs(){
+  var srch=document.getElementById("srch-open"), tts=document.getElementById("tts-toggle");
+  var sb=document.getElementById("nv-m-search"), ab=document.getElementById("nv-m-audio");
+  sb.hidden=!srch; ab.hidden=!tts||tts.hidden;
+  if(tts){ var on=tts.getAttribute("aria-pressed")==="true"; ab.setAttribute("aria-pressed",on?"true":"false"); ab.textContent="Audio: "+(on?"on":"off"); }
+}
+function openMenu(){
+  mBuild(); mActs(); sheet.hidden=false; document.body.classList.add("nv-lock"); menuBtn.setAttribute("aria-expanded","true");
+  var c=mList.querySelector(".cur")||mList.firstChild;
+  if(c){ try{c.scrollIntoView({block:"center"});}catch(e){} try{c.focus({preventScroll:true});}catch(e){} }
+}
+function closeMenu(restore){
+  if(sheet.hidden) return;
+  sheet.hidden=true; document.body.classList.remove("nv-lock"); menuBtn.setAttribute("aria-expanded","false");
+  if(restore!==false){ try{menuBtn.focus({preventScroll:true});}catch(e){} }
+}
+menuBtn.addEventListener("click",function(){ if(sheet.hidden) openMenu(); else closeMenu(); });
+sheet.querySelector(".nv-bd").addEventListener("click",function(){ closeMenu(); });
+sheet.querySelector(".nv-x").addEventListener("click",function(){ closeMenu(); });
+mList.addEventListener("click",function(e){
+  var b=e.target.closest?e.target.closest(".nv-item"):null; if(!b) return;
+  var p=b.getAttribute("data-p"); closeMenu(false);
+  if(typeof show==="function") show(p);
+});
+document.getElementById("nv-m-search").addEventListener("click",function(){
+  var s=document.getElementById("srch-open"); closeMenu(false); if(s) s.click();
+});
+document.getElementById("nv-m-audio").addEventListener("click",function(){
+  var t=document.getElementById("tts-toggle"); if(t) t.click(); setTimeout(mActs,0);
+});
+sheet.addEventListener("keydown",function(e){
+  if(e.key==="Escape"){ e.preventDefault(); closeMenu(); return; }
+  if(e.key!=="Tab") return;
+  var f=[].filter.call(sheet.querySelectorAll("button"),function(x){ return !x.hidden&&!x.disabled&&x.offsetParent!==null; });
+  if(!f.length) return;
+  var first=f[0], last=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===first){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey&&document.activeElement===last){ e.preventDefault(); first.focus(); }
+});
+document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&!sheet.hidden) closeMenu(); });
 var tick=false; window.addEventListener("scroll",function(){ if(tick) return; tick=true; requestAnimationFrame(function(){tick=false; ui();}); },{passive:true});
 /* keyboard: Alt+Left / Alt+Right, Esc = back (when no dialog/input) */
 document.addEventListener("keydown",function(e){
