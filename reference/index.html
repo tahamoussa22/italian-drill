@@ -683,7 +683,39 @@ body.nv-lock{overflow:hidden}
 #nv-menu .nv-item.cur:focus-visible{outline-color:#fff}
 @media print{#nv-bar,#nv-menu{display:none}}
 .srch-r mark{background:#FFD60A;color:#14122B;border-radius:3px;padding:0 2px}
-</style><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2D3BE8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Italiano"></head>
+</style><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2D3BE8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Italiano"><style id="tr-css">#tr-chip{position:fixed;z-index:165;left:0;top:0;min-height:40px;padding:0 16px;border:0;border-radius:999px;background:#2D3BE8;color:#fff;font:700 14px/1 "Hanken Grotesk","Hanken",system-ui,sans-serif;box-shadow:0 6px 18px rgba(20,18,43,.35);cursor:pointer;-webkit-tap-highlight-color:transparent}
+#tr-chip[hidden]{display:none}
+#tr-chip:hover{background:#4251F0}
+#tr-chip:focus-visible{outline:2px solid #FFD60A;outline-offset:2px}
+#tr-panel{position:fixed;z-index:160;right:16px;bottom:84px;width:min(380px,calc(100vw - 24px));box-sizing:border-box;background:#14122B;color:#fff;border-radius:18px;padding:10px 14px 14px;box-shadow:0 12px 40px rgba(20,18,43,.45);font-family:"Hanken Grotesk","Hanken",system-ui,sans-serif}
+#tr-panel[hidden]{display:none}
+@media(max-width:560px){#tr-panel{left:12px;right:12px;width:auto;bottom:calc(76px + env(safe-area-inset-bottom,0px))}}
+#tr-panel .tr-head{display:flex;align-items:center;gap:8px;padding:2px 0 8px;cursor:grab;touch-action:none}
+#tr-panel .tr-head b{font-size:17px;font-weight:800;color:#FFD60A;margin-right:auto}
+#tr-panel button,#tr-panel a.tr-primary{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#tr-panel .tr-dir{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid #5A57A0;background:transparent;color:#D9DBFF;font-size:13px;font-weight:650;white-space:nowrap}
+#tr-panel .tr-dir i{font-style:normal;margin-left:4px;color:#FFD60A}
+#tr-panel .tr-dir:hover{border-color:#FFD60A;color:#fff}
+#tr-panel .tr-x{width:36px;height:36px;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:22px;line-height:1}
+#tr-panel textarea{display:block;width:100%;box-sizing:border-box;min-height:84px;resize:vertical;padding:10px 12px;border-radius:12px;border:1px solid #3A3790;background:#0E0C20;color:#fff;font:500 16px/1.4 "Hanken Grotesk","Hanken",system-ui,sans-serif}
+#tr-panel textarea:focus{outline:2px solid #FFD60A;outline-offset:0;border-color:transparent}
+#tr-panel .tr-acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+#tr-panel .tr-acts button,#tr-panel a.tr-primary{min-height:44px;padding:0 16px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;text-decoration:none}
+#tr-panel a.tr-primary{background:#2D3BE8;color:#fff;border:0;flex:1 1 auto}
+#tr-panel a.tr-primary:hover{background:#4251F0}
+#tr-panel .tr-acts button{border:1px solid #5A57A0;background:transparent;color:#D9DBFF}
+#tr-panel .tr-acts button:hover{border-color:#FFD60A;color:#fff}
+#tr-panel .tr-acts [hidden]{display:none}
+#tr-panel .tr-note{margin:10px 2px 0;font-size:12px;line-height:1.4;color:#B9BCEB}
+#tr-panel .tr-hist{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#tr-panel .tr-hist[hidden]{display:none}
+#tr-panel .tr-hist>span{font-size:12px;color:#B9BCEB;font-weight:650}
+#tr-panel .tr-hl{display:flex;gap:6px;flex-wrap:wrap}
+#tr-panel .tr-h{min-height:32px;padding:0 12px;border-radius:999px;border:0;background:rgba(255,255,255,.09);color:#fff;font-size:12.5px;font-weight:600;max-width:100%}
+#tr-panel .tr-h:hover{background:rgba(255,255,255,.18)}
+#tr-panel button:focus-visible,#tr-panel a:focus-visible{outline:2px solid #FFD60A;outline-offset:2px}
+@media print{#tr-chip,#tr-panel{display:none}}
+</style></head>
 <body>
 <div class="topbar"><div class="wrap topbar-in">
 <button class="brand tab" data-p="0" style="background:none;border:0;cursor:pointer">Italiano</button>
@@ -1957,15 +1989,38 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp
 (function(){
   var btn=document.getElementById("tts-toggle"); if(!btn) return;
   if(!("speechSynthesis" in window)){ btn.hidden=true; return; }
-  var on=false, voice=null, warned=false;
-  function pick(){ var vs=window.speechSynthesis.getVoices()||[]; voice=null; for(var i=0;i<vs.length;i++){ if(/^it([-_]|$)/i.test(vs[i].lang)){ voice=vs[i]; break; } } }
-  pick(); if(window.speechSynthesis.onvoiceschanged!==undefined) window.speechSynthesis.onvoiceschanged=pick;
-  function toast(msg){ var t=document.getElementById("tts-toast"); if(!t){ t=document.createElement("div"); t.id="tts-toast"; t.style.cssText="position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#15212E;color:#fff;padding:10px 16px;border-radius:8px;font:14px/1.4 sans-serif;z-index:300;max-width:90vw"; document.body.appendChild(t); } t.textContent=msg; t.hidden=false; clearTimeout(t._h); t._h=setTimeout(function(){t.hidden=true;},3500); }
-  btn.addEventListener("click",function(){ on=!on; btn.setAttribute("aria-pressed",on?"true":"false"); document.body.classList.toggle("tts-on",on); if(on){ pick(); if(!voice) toast("No Italian voice found on this device; it will use the default voice."); else toast("Audio on: tap any Italian sentence to hear it."); } else window.speechSynthesis.cancel(); });
+  var ss=window.speechSynthesis, on=false, voice=null, fails=0;
+  /* best Italian voice: exact it-IT beats other it-*, installed (local) voices beat network voices, which fail offline */
+  function score(v){ var l=String(v.lang||"").replace("_","-").toLowerCase(), s=0; if(l==="it-it") s+=4; else if(/^it(-|$)/.test(l)) s+=2; else return -1; if(v.localService) s+=3; return s; }
+  function pick(){ var vs=ss.getVoices()||[], best=-1; voice=null; for(var i=0;i<vs.length;i++){ var sc=score(vs[i]); if(sc>best){ best=sc; voice=vs[i]; } } }
+  pick(); try{ ss.addEventListener("voiceschanged",pick); }catch(e){ ss.onvoiceschanged=pick; }
+  function toast(msg){ var t=document.getElementById("tts-toast"); if(!t){ t=document.createElement("div"); t.id="tts-toast"; t.style.cssText="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#15212E;color:#fff;padding:10px 16px;border-radius:8px;font:14px/1.4 sans-serif;z-index:300;max-width:90vw;text-align:center"; document.body.appendChild(t); } t.textContent=msg; t.hidden=false; clearTimeout(t._h); t._h=setTimeout(function(){t.hidden=true;},4500); }
+  function trouble(){ fails++; toast(fails>1 ? "Still no sound. Select the sentence, tap Translate, then use Google Translate to hear it." : "Couldn't play that. Check the volume and that an Italian voice is installed (device Settings → Text-to-speech)."); }
+  /* speak(): a speak() straight after cancel() is silently dropped on some browsers, so only wait when something is playing */
+  function say(txt){
+    try{
+      pick();
+      var u=new SpeechSynthesisUtterance(txt), started=false; u.lang=voice?voice.lang:"it-IT"; if(voice) u.voice=voice; u.rate=0.92;
+      u.onstart=function(){ started=true; fails=0; };
+      u.onerror=function(ev){ if(ev&&(ev.error==="canceled"||ev.error==="interrupted")) return; trouble(); };
+      var go=function(){ try{ ss.speak(u); }catch(e){ trouble(); } setTimeout(function(){ if(!started&&!ss.speaking&&!ss.pending) trouble(); },3000); };
+      if(ss.speaking||ss.pending){ ss.cancel(); setTimeout(go,90); } else go();
+    }catch(err){ trouble(); }
+  }
+  window.__itSay=say; window.__itHasVoice=function(){ pick(); return !!voice; };
+  btn.addEventListener("click",function(){
+    on=!on; btn.setAttribute("aria-pressed",on?"true":"false"); document.body.classList.toggle("tts-on",on);
+    if(on){
+      try{ var p=new SpeechSynthesisUtterance(""); p.volume=0; ss.speak(p); }catch(e){} /* primes iOS inside the tap */
+      pick();
+      if(!voice) toast("No Italian voice found on this device. Install one in Settings → Text-to-speech, or use Translate → Google Translate to hear sentences.");
+      else toast("Audio on (voice: "+voice.name+"). Tap any Italian sentence to hear it.");
+    } else ss.cancel();
+  });
   document.addEventListener("click",function(e){
     if(!on) return; var t=e.target.closest(".it,.sb-it,.sb-r .it"); if(!t) return;
     var txt=t.textContent.replace(/\s+/g," ").trim(); if(!txt||txt.indexOf("___")>-1) return;
-    try{ window.speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance(txt); u.lang="it-IT"; if(voice) u.voice=voice; u.rate=0.92; window.speechSynthesis.speak(u); }catch(err){}
+    say(txt);
   });
 })();
 
@@ -2147,7 +2202,7 @@ document.getElementById("nv-top").addEventListener("click",function(){ window.sc
 var sheet=document.createElement("div"); sheet.id="nv-menu"; sheet.hidden=true;
 sheet.innerHTML='<div class="nv-bd"></div><div class="nv-panel" role="dialog" aria-modal="true" aria-label="Menu">'+
  '<div class="nv-head"><b>Menu</b><button type="button" class="nv-x" aria-label="Close menu">×</button></div>'+
- '<div class="nv-acts"><button type="button" id="nv-m-search">Search</button><button type="button" id="nv-m-audio" aria-pressed="false">Audio</button></div>'+
+ '<div class="nv-acts"><button type="button" id="nv-m-tr">Translate</button><button type="button" id="nv-m-search">Search</button><button type="button" id="nv-m-audio" aria-pressed="false">Audio</button></div>'+
  '<div class="nv-list"></div></div>';
 document.body.appendChild(sheet);
 var menuBtn=document.getElementById("nv-menu-btn"), mList=sheet.querySelector(".nv-list");
@@ -2188,6 +2243,9 @@ mList.addEventListener("click",function(e){
   var p=b.getAttribute("data-p"); closeMenu(false);
   if(typeof show==="function") show(p);
 });
+document.getElementById("nv-m-tr").addEventListener("click",function(){
+  closeMenu(false); if(window.__tr) window.__tr.open("");
+});
 document.getElementById("nv-m-search").addEventListener("click",function(){
   var s=document.getElementById("srch-open"); closeMenu(false); if(s) s.click();
 });
@@ -2221,6 +2279,120 @@ var standalone=(window.matchMedia&&matchMedia("(display-mode: standalone)").matc
 if(standalone&&!location.hash){ var last=null; try{last=localStorage.getItem(KEY);}catch(e){} if(last&&last!=="#p0"){ try{history.replaceState({i:0,y:0},"",last);}catch(e){} go(last,0); } }
 else { try{localStorage.setItem(KEY,cur());}catch(e){} }
 ui();
+})();
+</script>
+<script id="tr-js">(function(){
+"use strict";
+/* Translator: select text -> "Translate" chip -> floating panel -> Google Translate in a small popup window.
+   (translate.google.com cannot be embedded in a page, so the translation itself opens in its own window.) */
+var HKEY="itref.tr.hist", dir="it-en", chip=null, panel=null, ta=null, go=null, lastSel="", tmr=null;
+var coarse=window.matchMedia&&matchMedia("(pointer:coarse)").matches;
+function $(s,r){return (r||document).querySelector(s);}
+function langs(){ return dir==="it-en"?["it","en"]:["en","it"]; }
+function url(text){ var l=langs(); return "https://translate.google.com/?sl="+l[0]+"&tl="+l[1]+"&text="+encodeURIComponent(text)+"&op=translate"; }
+function hist(){ try{ var h=JSON.parse(localStorage.getItem(HKEY)||"[]"); return Array.isArray(h)?h:[]; }catch(e){ return []; } }
+function saveHist(t){
+  t=t.trim(); if(!t) return;
+  var h=hist().filter(function(x){ return !(x&&x.t===t&&x.d===dir); }); h.unshift({t:t,d:dir}); h=h.slice(0,6);
+  try{ localStorage.setItem(HKEY,JSON.stringify(h)); }catch(e){}
+}
+function selection(){
+  var s=window.getSelection&&window.getSelection(); if(!s||s.isCollapsed||!s.rangeCount) return null;
+  var t=s.toString().replace(/\s+/g," ").trim(); if(!t||t.length>400) return null;
+  var r=s.getRangeAt(0), n=r.commonAncestorContainer, el=n.nodeType===1?n:n.parentElement; if(!el||!el.closest) return null;
+  if(el.closest("#tr-panel,#tr-chip,#nv-menu,#nv-bar,.srch-wrap,.qz-in,input,textarea,script,style")) return null;
+  var rect=r.getBoundingClientRect(); if(!rect||(!rect.width&&!rect.height)) return null;
+  return {text:t,rect:rect};
+}
+function panelOpen(){ return panel&&!panel.hidden; }
+function hideChip(){ if(chip) chip.hidden=true; }
+function place(rect){
+  var w=chip.offsetWidth||112, h=chip.offsetHeight||40, vw=window.innerWidth, vh=window.innerHeight;
+  var x=Math.min(Math.max(8,rect.left+rect.width/2-w/2),vw-w-8);
+  var y=coarse?rect.bottom+14:rect.top-h-10;      /* touch: below the text so the phone's own selection toolbar stays clear */
+  if(y<8) y=rect.bottom+10;
+  if(y>vh-h-84) y=Math.max(8,vh-h-84);             /* keep clear of the bottom bar */
+  chip.style.left=x+"px"; chip.style.top=y+"px";
+}
+function evalSel(){
+  clearTimeout(tmr);
+  tmr=setTimeout(function(){
+    if(panelOpen()){ hideChip(); return; }
+    var s=selection(); if(!s){ hideChip(); return; }
+    lastSel=s.text; chip.hidden=false; place(s.rect);
+  },260);
+}
+function refreshLink(){
+  var l=langs(), names={it:"Italian",en:"English"};
+  $(".tr-from",panel).textContent=names[l[0]]; $(".tr-to",panel).textContent=names[l[1]];
+  ta.setAttribute("lang",l[0]); ta.placeholder=l[0]==="it"?"Type or select Italian text…":"Type English text…";
+  go.href=url(ta.value);
+  var say=$("#tr-say",panel); if(say) say.hidden=!(l[0]==="it"&&typeof window.__itSay==="function");
+}
+function renderHist(){
+  var box=$(".tr-hist",panel), list=$(".tr-hl",panel), h=hist(); list.textContent="";
+  box.hidden=!h.length;
+  h.forEach(function(x){
+    var b=document.createElement("button"); b.type="button"; b.className="tr-h"; b.textContent=x.t.length>34?x.t.slice(0,33)+"…":x.t; b.title=x.t;
+    b.addEventListener("click",function(){ dir=x.d==="en-it"?"en-it":"it-en"; ta.value=x.t; refreshLink(); ta.focus(); });
+    list.appendChild(b);
+  });
+}
+function openPanel(text){
+  hideChip();
+  if(typeof text==="string"&&text) ta.value=text.slice(0,900); else if(text==="") ta.value="";
+  panel.hidden=false; refreshLink(); renderHist();
+  if(!ta.value) { try{ ta.focus(); }catch(e){} }
+}
+function closePanel(){ if(panel&&!panel.hidden){ panel.hidden=true; evalSel(); } }
+function launch(e){
+  e.preventDefault();
+  var text=ta.value.trim(); saveHist(text); renderHist();
+  var u=url(text), f="popup=yes,width=480,height=720,left="+Math.max(0,(window.screenX||0)+(window.outerWidth||1000)-520)+",top="+((window.screenY||0)+60);
+  var w=null; try{ w=window.open(u,"gtranslate",f); }catch(err){}
+  if(w){ try{ w.opener=null; w.focus(); }catch(err){} }
+  else { window.open(u,"_blank","noopener"); }
+}
+function copy(){
+  var t=ta.value; if(!t) return; var b=$("#tr-copy",panel);
+  function done(){ b.textContent="Copied"; setTimeout(function(){ b.textContent="Copy"; },1200); }
+  try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done,function(){}); return; } }catch(e){}
+  try{ ta.select(); document.execCommand("copy"); done(); }catch(e){}
+}
+function build(){
+  chip=document.createElement("button"); chip.id="tr-chip"; chip.type="button"; chip.hidden=true; chip.textContent="Translate";
+  chip.addEventListener("pointerdown",function(e){ e.preventDefault(); });
+  chip.addEventListener("mousedown",function(e){ e.preventDefault(); });
+  chip.addEventListener("click",function(){ openPanel(lastSel); });
+  document.body.appendChild(chip);
+  panel=document.createElement("div"); panel.id="tr-panel"; panel.hidden=true; panel.setAttribute("role","dialog"); panel.setAttribute("aria-label","Translate");
+  panel.innerHTML='<div class="tr-head"><b>Translate</b><button type="button" class="tr-dir" aria-label="Swap translation direction"><span class="tr-from">Italian</span> → <span class="tr-to">English</span> <i>⇄</i></button><button type="button" class="tr-x" aria-label="Close translator">×</button></div>'+
+   '<textarea id="tr-text" rows="3" maxlength="900" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>'+
+   '<div class="tr-acts"><a id="tr-go" class="tr-primary" href="#" target="gtranslate" rel="noopener">Google Translate ↗</a><button type="button" id="tr-say">Listen</button><button type="button" id="tr-copy">Copy</button></div>'+
+   '<p class="tr-note">Opens in a small window (a new tab on phones). Google Translate has its own Italian audio.</p>'+
+   '<div class="tr-hist" hidden><span>Recent</span><div class="tr-hl"></div></div>';
+  document.body.appendChild(panel);
+  ta=$("#tr-text",panel); go=$("#tr-go",panel);
+  ta.addEventListener("input",function(){ go.href=url(ta.value); });
+  go.addEventListener("click",launch);
+  $(".tr-x",panel).addEventListener("click",closePanel);
+  $(".tr-dir",panel).addEventListener("click",function(){ dir=dir==="it-en"?"en-it":"it-en"; refreshLink(); });
+  $("#tr-say",panel).addEventListener("click",function(){ var t=ta.value.trim(); if(t&&typeof window.__itSay==="function") window.__itSay(t); });
+  $("#tr-copy",panel).addEventListener("click",copy);
+  panel.addEventListener("keydown",function(e){ if(e.key==="Escape"){ e.preventDefault(); closePanel(); } });
+  if(!coarse){ /* desktop: drag the panel by its header */
+    var head=$(".tr-head",panel), dx=0, dy=0, drag=false;
+    head.addEventListener("pointerdown",function(e){ if(e.target.closest("button")) return; var r=panel.getBoundingClientRect(); dx=e.clientX-r.left; dy=e.clientY-r.top; drag=true; head.setPointerCapture(e.pointerId); panel.style.left=r.left+"px"; panel.style.top=r.top+"px"; panel.style.right="auto"; panel.style.bottom="auto"; });
+    head.addEventListener("pointermove",function(e){ if(!drag) return; var x=Math.min(Math.max(0,e.clientX-dx),window.innerWidth-panel.offsetWidth), y=Math.min(Math.max(0,e.clientY-dy),window.innerHeight-60); panel.style.left=x+"px"; panel.style.top=y+"px"; });
+    head.addEventListener("pointerup",function(){ drag=false; });
+  }
+  document.addEventListener("selectionchange",evalSel);
+  document.addEventListener("mouseup",evalSel);
+  window.addEventListener("scroll",function(){ if(chip&&!chip.hidden) chip.hidden=true; evalSel(); },{passive:true});
+  window.addEventListener("resize",evalSel);
+}
+if(document.body) build(); else document.addEventListener("DOMContentLoaded",build);
+window.__tr={open:function(t){ if(!panel) return; openPanel(typeof t==="string"?t:""); },close:closePanel};
 })();
 </script>
 </body>
