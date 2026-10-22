@@ -336,6 +336,7 @@ a.tile:focus-visible{outline:2px solid var(--verde);outline-offset:2px}
 .tn-bar{position:sticky;top:var(--tbh,50px);z-index:30;background:rgba(244,243,252,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .tn-bar-in{display:flex;gap:6px;align-items:center;overflow-x:auto;padding-top:9px;padding-bottom:9px;scrollbar-width:thin}
 .tn-pill{flex:0 0 auto;font:600 12.5px/1 var(--sans);color:var(--ink-2);background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;cursor:pointer;white-space:nowrap}
+.tn-pill{min-height:44px;display:inline-flex;align-items:center}.tn-toc a{display:inline-flex;align-items:center;min-height:44px;padding:0 6px}
 .tn-pill:hover{border-color:var(--verde);color:var(--verde)}
 .tn-pill[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
 .tn-sep{flex:0 0 auto;font:700 10px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 2px 0 10px}
@@ -2846,13 +2847,14 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp
   var rates=[0.55,0.7,0.85,1], ri=1;
   try{ var sv=parseInt(localStorage.getItem("itref.tts.rate"),10); if(sv>=0&&sv<rates.length) ri=sv; }catch(e){}
   window.__ttsRate=function(step){ if(step){ ri=(ri+1)%rates.length; try{ localStorage.setItem("itref.tts.rate",String(ri)); }catch(e){} } return rates[ri]; };
+  var sayGen=0;
   function say(txt,mult){
-    try{
+    try{ var myGen=++sayGen;
       pick(); txt=speakable(txt); if(!txt) return;
       var u=new SpeechSynthesisUtterance(txt), started=false; u.lang=voice?voice.lang:"it-IT"; if(voice) u.voice=voice; u.rate=rates[ri]*(mult||1);
       u.onstart=function(){ started=true; fails=0; };
       u.onerror=function(ev){ if(ev&&(ev.error==="canceled"||ev.error==="interrupted")) return; trouble(); };
-      var go=function(){ try{ ss.speak(u); }catch(e){ trouble(); } setTimeout(function(){ if(!started&&!ss.speaking&&!ss.pending) trouble(); },3000); };
+      var go=function(){ if(myGen!==sayGen) return; try{ ss.speak(u); }catch(e){ trouble(); } setTimeout(function(){ if(!started&&!ss.speaking&&!ss.pending) trouble(); },3000); };
       if(ss.speaking||ss.pending){ ss.cancel(); setTimeout(go,90); } else go();
     }catch(err){ trouble(); }
   }
@@ -3619,8 +3621,13 @@ function langFix(){
   [".it",".sb-it",".vf b",".vbtn b",".tn-irrt td",".tn-irrt th",".lab-forms span",".rd-t p",".wrong",".right",".cs-t tbody th"].forEach(function(s){ [].forEach.call(document.querySelectorAll(s),function(n){ if(!n.hasAttribute("lang")&&!n.closest("[lang]")) n.setAttribute("lang","it"); }); });
   [].forEach.call(document.querySelectorAll(".cs-t td"),function(n){ if(!n.hasAttribute("lang")&&!EN.test(n.textContent)) n.setAttribute("lang","it"); });
 }
-var q=false; function later(){ if(q) return; q=true; (window.requestAnimationFrame||setTimeout)(function(){ q=false; scan(); dlgScan(); langFix(); }); }
-function init(){ scan(); dlgScan(); langFix(); pageWatch(); try{ new MutationObserver(later).observe(document.body,{childList:true,subtree:true}); }catch(e){} document.addEventListener("focusin",function(e){ if(eligible(e.target)) attach(e.target); }); }
+var q=false; 
+/* sentence bank: make each Italian sentence a keyboard-operable listen control (Enter or Space) */
+var sbKey=1;
+function sbScan(){ [].forEach.call(document.querySelectorAll(".sb-it:not([data-kb])"),function(el){ el.setAttribute("data-kb","1"); el.setAttribute("tabindex","0"); el.setAttribute("role","button"); if(!el.getAttribute("aria-label")) el.setAttribute("aria-label","Listen: "+el.textContent.trim().slice(0,80)); }); }
+document.addEventListener("keydown",function(e){ if((e.key==="Enter"||e.key===" ")&&e.target&&e.target.classList&&e.target.classList.contains("sb-it")){ e.preventDefault(); if(typeof window.__itSay==="function") window.__itSay(e.target.textContent); } });
+function later(){ if(q) return; q=true; (window.requestAnimationFrame||setTimeout)(function(){ q=false; scan(); dlgScan(); langFix(); sbScan(); }); }
+function init(){ scan(); dlgScan(); langFix(); sbScan(); pageWatch(); try{ new MutationObserver(later).observe(document.body,{childList:true,subtree:true}); }catch(e){} document.addEventListener("focusin",function(e){ if(eligible(e.target)) attach(e.target); }); }
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
 })();
 </script>
@@ -3721,7 +3728,7 @@ function mountWrite(){
   function saveNow(){
     clearTimeout(saveT); saveT=null; var t=ta.value; if(!t.trim()&&!cur) return;
     if(!cur){ cur=newId(); try{localStorage.setItem(curKey,cur);}catch(e){} }
-    var d=load(), now=Date.now(); var pv=d.drafts[cur], hv=((pv&&!pv.del&&pv.h)||[]).slice(); if(pv&&!pv.del&&(pv.x||"").trim().length>30&&pv.x!==t&&now-((hv[0]&&hv[0].u)||0)>600000){ hv.unshift({x:String(pv.x).slice(0,6000),u:pv.u||now}); hv=hv.slice(0,3); } d.drafts[cur]={id:cur,p:sel.value,x:t,ck:ckState(),u:now,h:hv}; lastU=now; Object.keys(d.drafts).filter(function(k){return d.drafts[k]&&!d.drafts[k].del;}).sort(function(a,b){return d.drafts[b].u-d.drafts[a].u;}).slice(30).forEach(function(k){ d.drafts[k]={id:k,del:1,x:"",u:now}; }); put(d); $("#lw-sv").textContent="Saved "+new Date(now).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}); list();
+    var d=load(), now=Date.now(); var pv=d.drafts[cur], hv=((pv&&!pv.del&&pv.h)||[]).slice(); if(pv&&!pv.del&&(pv.x||"").trim().length>30&&pv.x!==t&&now-((hv[0]&&hv[0].u)||0)>600000){ hv.unshift({x:String(pv.x).slice(0,6000),u:pv.u||now}); hv=hv.slice(0,3); } hv=hv.map(function(v){ return {x:String(v.x).slice(0,4000),u:v.u}; }); d.drafts[cur]={id:cur,p:sel.value,x:t,ck:ckState(),u:now,h:hv}; lastU=now; Object.keys(d.drafts).filter(function(k){return d.drafts[k]&&!d.drafts[k].del;}).sort(function(a,b){return d.drafts[b].u-d.drafts[a].u;}).slice(30).forEach(function(k){ d.drafts[k]={id:k,del:1,x:"",u:now}; }); Object.keys(d.drafts).filter(function(k){return d.drafts[k]&&!d.drafts[k].del;}).sort(function(a,b){return d.drafts[b].u-d.drafts[a].u;}).slice(8).forEach(function(k){ if(d.drafts[k].h&&d.drafts[k].h.length) d.drafts[k].h=[]; }); put(d); $("#lw-sv").textContent="Saved "+new Date(now).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}); list();
   }
   function soon(){ clearTimeout(saveT); $("#lw-sv").textContent="…"; saveT=setTimeout(function(){ saveT=null; saveNow(); },800); }
   function openDraft(id){
