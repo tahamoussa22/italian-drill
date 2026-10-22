@@ -687,6 +687,10 @@ body.nv-lock{overflow:hidden}
 #nv-menu .nv-item.cur:focus-visible{outline-color:#fff}
 @media print{#nv-bar,#nv-menu{display:none}}
 .srch-r mark{background:#FFD60A;color:#14122B;border-radius:3px;padding:0 2px}
+
+.topbar .tab-grp{flex:0 0 auto;align-self:center;font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#7F97B0;padding:0 2px 0 12px;margin-left:6px;border-left:1px solid #2A3E55;white-space:nowrap}
+#nv-menu .nv-grp{grid-column:1/-1;font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#FFD60A;margin:10px 2px 0}
+#nv-menu .nv-grp:first-child{margin-top:0}
 </style><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="icon-192.png"><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#2D3BE8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Italiano piano piano"><style id="lab-css">.lab{margin-top:6px}
 .lab-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
 .lab-l{font-size:13px;color:var(--muted);font-weight:600}
@@ -1185,6 +1189,8 @@ body.nv-lock{overflow:hidden}
 :root[data-theme="dark"] #nv-menu .nv-item.cur em{background:rgba(20,18,43,.16)}
 :root[data-theme="dark"] #nv-menu button:focus-visible{outline:2px solid #FFD60A}
 :root[data-theme="dark"] .srch-r mark{background:#FFD60A;color:#14122B;--ink:#14122B;--ink-2:#3A3768;--muted:#55527F}
+:root[data-theme="dark"] .topbar .tab-grp{color:#7F97B0;border-left:1px solid #2A3E55}
+:root[data-theme="dark"] #nv-menu .nv-grp{color:#FFD60A}
 :root[data-theme="dark"] .lab-l{color:var(--muted)}
 :root[data-theme="dark"] .lab-sel,:root[data-theme="dark"] .lab-in,:root[data-theme="dark"] .lab-ta{color:var(--ink);background:var(--card);border:1.5px solid var(--line)}
 :root[data-theme="dark"] .lab-sel:focus,:root[data-theme="dark"] .lab-in:focus,:root[data-theme="dark"] .lab-ta:focus{outline:2px solid var(--verde)}
@@ -2984,11 +2990,16 @@ sheet.innerHTML='<div class="nv-bd"></div><div class="nv-panel" role="dialog" ar
  '<div class="nv-list"></div></div>';
 document.body.appendChild(sheet);
 var menuBtn=document.getElementById("nv-menu-btn"), mList=sheet.querySelector(".nv-list");
+/* group the sections: Learn / Practise / Reference (numbers stay as stable section names) */
+var GRP=[["Learn",[1,2,3,4,5,6,7,8,19,18]],["Practise",[16,17,20,21,12]],["Reference",[15,13,9,10,11,14,22]]];
+(function(){ var bar=document.querySelector(".topbar .tabs"); if(!bar||bar._g) return; bar._g=1; var by={}; [].forEach.call(bar.querySelectorAll(".tab"),function(t){ by[t.getAttribute("data-p")]=t; });
+  GRP.forEach(function(g){ var l=document.createElement("span"); l.className="tab-grp"; l.textContent=g[0]; l.setAttribute("aria-hidden","true"); bar.appendChild(l); g[1].forEach(function(n){ if(by[n]) bar.appendChild(by[n]); }); }); })();
 function mBuild(){
   var on=document.querySelector(".tab.on"), cp=on?on.getAttribute("data-p"):"0";
   mList.textContent="";
   [].forEach.call(document.querySelectorAll(".topbar .tab"),function(t){
     var p=t.getAttribute("data-p"), txt=t.textContent.trim(), m=/^(\d+)\.\s*(.*)$/.exec(txt);
+    var pv=t.previousElementSibling; if(pv&&pv.classList.contains("tab-grp")){ var gh=document.createElement("div"); gh.className="nv-grp"; gh.textContent=pv.textContent; mList.appendChild(gh); }
     var b=document.createElement("button"); b.type="button"; b.className="nv-item"; b.setAttribute("data-p",p);
     var n=document.createElement("em"); n.textContent=m?m[1]:"⌂";
     var s=document.createElement("span"); s.textContent=m?m[2]:"Home";
@@ -2996,6 +3007,9 @@ function mBuild(){
     if(p===cp){ b.className+=" cur"; b.setAttribute("aria-current","page"); }
     mList.appendChild(b);
   });
+  var gp=document.createElement("div"); gp.className="nv-grp"; gp.textContent="Progress"; mList.appendChild(gp);
+  var pb=document.createElement("button"); pb.type="button"; pb.className="nv-item"; pb.setAttribute("data-p","16"); pb.setAttribute("data-sel","#s16-progress");
+  var pn=document.createElement("em"); pn.textContent="✓"; var ps=document.createElement("span"); ps.textContent="My progress"; pb.appendChild(pn); pb.appendChild(ps); mList.appendChild(pb);
 }
 function mActs(){
   var srch=document.getElementById("srch-open"), tts=document.getElementById("tts-toggle");
@@ -3025,6 +3039,7 @@ mList.addEventListener("click",function(e){
   var b=e.target.closest?e.target.closest(".nv-item"):null; if(!b) return;
   var p=b.getAttribute("data-p"); closeMenu(false);
   if(typeof show==="function") show(p);
+  var sel=b.getAttribute("data-sel"); if(sel) setTimeout(function(){ var e=document.querySelector(sel); if(e&&e.scrollIntoView) e.scrollIntoView({behavior:"smooth",block:"start"}); },250);
 });
 document.getElementById("nv-m-tr").addEventListener("click",function(){
   closeMenu(false); if(window.__tr) window.__tr.open("");
