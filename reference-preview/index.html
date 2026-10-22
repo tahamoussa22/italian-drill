@@ -1773,7 +1773,7 @@ var mem = {};
 function sget(k,d){ try{ var v=window.localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return (k in mem)?mem[k]:d; } }
 function sset(k,v){ try{ window.localStorage.setItem(k,JSON.stringify(v)); }catch(e){ mem[k]=v; } }
 var KEY = "itref.v1";
-function load(){ var d=sget(KEY,null)||{}; d.best=d.best||{}; d.hist=d.hist||[]; d.mist=d.mist||{}; d.cando=d.cando||{}; d.cdel=d.cdel||{}; d.gone=d.gone||{}; d.days=d.days||{}; return d; }
+function load(){ var d=sget(KEY,null)||{}; d.best=d.best||{}; d.hist=d.hist||[]; d.mist=d.mist||{}; d.cando=d.cando||{}; d.cdel=d.cdel||{}; d.gone=d.gone||{}; d.days=d.days||{}; d.runs=d.runs||{}; d.rdone=d.rdone||{}; return d; }
 function save(d,quiet){ if(!quiet) d.u=Date.now(); sset(KEY,d); if(!quiet){ try{ document.dispatchEvent(new CustomEvent("itref:changed")); }catch(e){} } }
 var DAY=86400000, IV=[1,3,7,14];
 function today(){ var t=new Date(); return t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2); }
@@ -1781,7 +1781,7 @@ function streak(d){ var n=0, t=new Date(); t.setHours(12,0,0,0); function k(x){ 
 /* merge two progress records (used by sync and by restore-from-file); never loses answers, honours "reset" */
 function merge(a,b){
   a=a||{}; b=b||{};
-  var R=Math.max(a.reset||0,b.reset||0), o={best:{},hist:[],mist:{},cando:{},cdel:{},gone:{},days:{},u:0};
+  var R=Math.max(a.reset||0,b.reset||0), o={best:{},hist:[],mist:{},cando:{},cdel:{},gone:{},days:{},runs:{},rdone:{},u:0};
   if(R) o.reset=R;
   [a,b].forEach(function(x){ if(R&&(x.u||0)<R) return;
     o.u=Math.max(o.u,x.u||0);
@@ -1792,9 +1792,13 @@ function merge(a,b){
     Object.keys(x.cdel||{}).forEach(function(k){ o.cdel[k]=Math.max(o.cdel[k]||0,x.cdel[k]); });
     Object.keys(x.gone||{}).forEach(function(k){ o.gone[k]=Math.max(o.gone[k]||0,x.gone[k]); });
     Object.keys(x.mist||{}).forEach(function(k){ var y=x.mist[k], c=o.mist[k]; if(!c||(y.u||0)>(c.u||0)) o.mist[k]=y; });
+    Object.keys(x.runs||{}).forEach(function(k){ var y=x.runs[k], c=o.runs[k]; if(!c||(y.u||0)>(c.u||0)) o.runs[k]=y; });
+    Object.keys(x.rdone||{}).forEach(function(k){ o.rdone[k]=Math.max(o.rdone[k]||0,x.rdone[k]); });
   });
   var seen={}; o.hist=o.hist.filter(function(h){ var id=h.k+"|"+h.t; if(seen[id]) return false; seen[id]=1; return true; }).sort(function(p,q){return p.t-q.t;}).slice(-60);
   Object.keys(o.mist).forEach(function(k){ if((o.gone[k]||0)>=(o.mist[k].u||0)&&o.gone[k]) delete o.mist[k]; });
+  Object.keys(o.runs).forEach(function(k){ if((o.rdone[k]||0)>=(o.runs[k].u||0)||Date.now()-(o.runs[k].u||0)>14*DAY) delete o.runs[k]; });
+  Object.keys(o.rdone).forEach(function(k){ if(Date.now()-o.rdone[k]>30*DAY) delete o.rdone[k]; });
   Object.keys(o.cando).forEach(function(k){ if((o.cdel[k]||0)>=o.cando[k]){ delete o.cando[k]; } else delete o.cdel[k]; });
   return o;
 }
@@ -1896,18 +1900,28 @@ function Quiz(root){
   function intro(){
     var pool=cfg.onlyGen?cfg.onlyGen.n:(cfg.exam?EXAM[cfg.exam].n:Math.min(cfg.n,Q.filter(function(q){return (cfg.sec==="all"||q.s===+cfg.sec)&&(!cfg.tag||q.g===cfg.tag);}).length+(cfg.gen?cfg.gen.n:0)));
     var h='<div class="qz-intro"><div><div class="qz-k">'+(cfg.exam?"Level exam":"Self-marking test")+'</div><div class="qz-t">'+esc(cfg.title||"Test yourself")+'</div><div class="qz-m" data-best>'+bestLine()+'</div></div>';
-    h+='<div class="qz-go"><button class="qz-btn qz-pri" data-start>Start · '+pool+' questions</button>';
+    var run=load().runs[cfg.key]; if(run&&!(run.a&&run.set&&run.a.length>0&&run.a.length<run.set.length)) run=null;
+    h+='<div class="qz-go">'+(run?'<button class="qz-btn qz-pri" data-resume>Resume · '+run.a.length+' of '+run.set.length+' answered</button><button class="qz-btn" data-start>Start again</button>':'<button class="qz-btn qz-pri" data-start>Start · '+pool+' questions</button>');
     if(cfg.exam) h+='<label class="qz-chk"><input type="checkbox" data-fb> show the answer after each question</label>';
     h+='</div></div>';
     if(cfg.exam) h+='<p class="qz-m" style="margin:8px 0 0">Exam mode: you see the result and every correction at the end. Pass mark 70%.</p>';
     root.innerHTML=h;
     root.querySelector("[data-start]").addEventListener("click",function(){ var fb=root.querySelector("[data-fb]"); if(fb&&fb.checked) cfg.mode="each"; start(); });
+    var rs=root.querySelector("[data-resume]"); if(rs) rs.addEventListener("click",function(){ var fb=root.querySelector("[data-fb]"); if(fb&&fb.checked) cfg.mode="each"; resume(run); });
   }
   function start(ids){
     if(cfg.onlyGen){ S.set=genMany(cfg.onlyGen.keys,cfg.onlyGen.n); }
     else S.set=ids?shuffle(ids.map(function(q){return q;})):buildSet(cfg);
     if(!S.set.length){ root.innerHTML='<p class="qz-m">No questions available for this test yet.</p>'; return; }
     S.i=0; S.ans=[]; S.done=false; S.t0=Date.now(); render();
+  }
+  function resume(run){
+    var set=run.set.map(function(x){ return (x&&typeof x==="object")?x:Q[x]; });
+    if(set.some(function(x){return !x;})){ start(); return; }
+    S.set=set; S.ans=run.a.map(function(x,i){ return {q:set[i],val:x[0],ok:!!x[1],skipped:!!x[2],accent:!!x[3]}; });
+    S.i=S.ans.length; S.done=false; S.t0=Date.now();
+    if(S.i>=set.length){ finish(); return; }
+    render();
   }
   function blankHtml(q){ var t=q.html?q.q:esc(q.q); return t.replace(/___/g,'<span class="qz-blank">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'); }
   function render(){
@@ -1956,7 +1970,23 @@ function Quiz(root){
       var nx=root.querySelector("[data-next]"); nx.hidden=false; nx.textContent=(S.i+1===S.set.length)?"See my result":"Next →"; try{nx.focus({preventScroll:true});}catch(e){}
     } else { next(); }
   }
-  function record(q,val,ok,skipped,accent){ S.ans[S.i]={q:q,val:val,ok:!!ok,skipped:!!skipped,accent:!!accent}; }
+  function record(q,val,ok,skipped,accent){
+    S.ans[S.i]={q:q,val:val,ok:!!ok,skipped:!!skipped,accent:!!accent};
+    /* save every answer at once, so nothing is lost if you stop halfway and it syncs to your other devices */
+    try{
+      var d=load(), now=Date.now(), id=q.id;
+      if(!q.gen){
+        if(!ok){ var o=d.mist[id]; d.mist[id]={n:((o&&o.n)||0)+1,b:0,due:now+IV[0]*DAY,u:now}; }
+        else if(d.mist[id]){ var m=d.mist[id]; m.u=now; if(!m.due||m.due<=now){ m.b=(m.b||0)+1; if(m.b>=IV.length){ delete d.mist[id]; d.gone[id]=now; } else m.due=now+IV[m.b]*DAY; } }
+      }
+      d.days[today()]=(d.days[today()]||0)+1;
+      if(S.i+1<S.set.length){
+        d.runs[cfg.key]={set:S.set.map(function(x){return x.gen?x:x.id;}),a:S.ans.map(function(x){return x?[x.val,x.ok?1:0,x.skipped?1:0,x.accent?1:0]:["",0,1,0];}),u:now};
+        var ks=Object.keys(d.runs); if(ks.length>8){ ks.sort(function(a,b){return d.runs[a].u-d.runs[b].u;}); delete d.runs[ks[0]]; }
+      }
+      save(d);
+    }catch(e){}
+  }
   function next(skipped){
     if(cfg.mode==="end"&&!S.ans[S.i]){ var q=S.set[S.i]; if(S.sel!==null){ var ok=norm(S.sel)===norm(q.a); record(q,S.sel,ok); } else { record(q,"",false,true); } }
     if(S.i+1>=S.set.length){ finish(); return; }
@@ -1967,12 +1997,7 @@ function Quiz(root){
     var d=load(), b=d.best[cfg.key]||{pct:0,score:0,total:total,tries:0};
     b.tries=(b.tries||0)+1; if(pct>=b.pct){ b.pct=pct; b.score=score; b.total=total; } d.best[cfg.key]=b;
     d.hist.push({k:cfg.key,pct:pct,score:score,total:total,t:Date.now()}); if(d.hist.length>60) d.hist=d.hist.slice(-60);
-    var now=Date.now();
-    S.ans.forEach(function(a){ if(!a||a.q.gen) return; var id=a.q.id;
-      if(!a.ok){ var o=d.mist[id]; d.mist[id]={n:((o&&o.n)||0)+1,b:0,due:now+IV[0]*DAY,u:now}; }
-      else if(d.mist[id]){ var m=d.mist[id]; m.u=now; if(!m.due||m.due<=now){ m.b=(m.b||0)+1; if(m.b>=IV.length){ delete d.mist[id]; d.gone[id]=now; } else m.due=now+IV[m.b]*DAY; } }
-    });
-    d.days[today()]=(d.days[today()]||0)+S.ans.filter(Boolean).length;
+    delete d.runs[cfg.key]; d.rdone[cfg.key]=Date.now();
     save(d);
     var secs={}; S.ans.forEach(function(a){ var k=a.q.s; secs[k]=secs[k]||{ok:0,n:0}; secs[k].n++; if(a.ok) secs[k].ok++; });
     var verdict=pct>=85?"Strong result.":pct>=70?"Pass.":pct>=50?"Close. Review the sections below and try again.":"Not yet. Work through the sections below, then retake.";
@@ -1996,6 +2021,7 @@ function Quiz(root){
   }
   root._start=start; root._S=S;
   intro();
+  document.addEventListener("itref:synced",function(){ if(root.querySelector(".qz-intro")&&!root.querySelector(".qz-q")) intro(); });
 }
 window.QZ={Quiz:Quiz,load:load,save:save,merge:merge,dash:function(){dash();},bank:Q,SEC:SEC,exam:EXAM,genMany:genMany};
 
@@ -2015,10 +2041,12 @@ function dash(){
   var nowT=Date.now(), due=ids.filter(function(i){ var m=d.mist[i]; return !m.due||m.due<=nowT; });
   var nextDue=ids.filter(function(i){return due.indexOf(i)<0;}).map(function(i){return d.mist[i].due;}).sort()[0];
   var sk=streak(d), wk7=0; for(var z=0;z<7;z++){ var zt=new Date(); zt.setDate(zt.getDate()-z); var zk=zt.getFullYear()+"-"+("0"+(zt.getMonth()+1)).slice(-2)+"-"+("0"+zt.getDate()).slice(-2); wk7+=(d.days[zk]||0); }
+  var runKeys=Object.keys(d.runs||{}).filter(function(k){ var r=d.runs[k]; return r&&r.a&&r.a.length<r.set.length&&Date.now()-r.u<14*DAY; });
+  var rh=runKeys.length?'<div class="tn-blk"><h3>Unfinished tests</h3><div class="qz-chips">'+runKeys.map(function(k){ var r=d.runs[k], m=/^sec:(\d+)/.exec(k), e=/^exam:(\w+)/.exec(k), name=m?(SEC[m[1]]||k):(e?(LVNAME[e[1]]||k)+" exam":k), pg=m?(SECPAGE[m[1]]||16):16; return '<a href="#p'+pg+'" data-go="'+pg+'" class="tn-chip"><b>'+esc(name)+'</b> '+r.a.length+' of '+r.set.length+'</a>'; }).join("")+'</div><p class="qz-m">Open the test and choose Resume. Your answers are saved on every device you are signed in on.</p></div>':'';
   var sh='<div class="qz-ex"><div class="qz-exc"><b>Day streak</b><span class="qz-pill '+(sk>0?"g":"a")+'">'+sk+'</span><small>'+(sk>0?"days in a row":"answer a question today")+'</small></div><div class="qz-exc"><b>Last 7 days</b><span class="qz-pill g">'+wk7+'</span><small>questions answered</small></div><div class="qz-exc"><b>Due for review</b><span class="qz-pill '+(due.length?"r":"g")+'">'+due.length+'</span><small>'+(due.length?"ready now":(nextDue?"next in "+Math.max(1,Math.ceil((nextDue-nowT)/DAY))+" day(s)":"nothing waiting"))+'</small></div></div>';
   var mh='<p class="qz-m">'+(ids.length?ids.length+' question'+(ids.length===1?"":"s")+' in your review queue. A missed question returns after 1, 3, 7 and 14 days; get it right each time and it leaves the queue.':'Your mistake log is empty. Take a section test or an exam and anything you miss will appear here.')+'</p>';
   if(ids.length){ var bys={}; ids.forEach(function(i){ var s=Q[i].s; bys[s]=(bys[s]||0)+1; }); mh+='<div class="qz-chips">'+Object.keys(bys).map(function(s){return '<span class="tn-chip"><b>'+esc(SEC[s])+'</b> '+bys[s]+'</span>';}).join("")+'</div>'; }
-  box.innerHTML='<div class="tn-blk"><h3>Your results by section</h3>'+h+'</div><div class="tn-blk"><h3>Level exams</h3>'+ex+'</div><div class="tn-blk"><h3>Streak and review</h3>'+sh+'</div><div class="tn-blk"><h3>Mistake log</h3>'+mh+(ids.length?'<div class="qz-wk"></div>':'')+'</div><div class="tn-blk"><h3>Backup and sync</h3><p class="qz-m">Download a copy of your progress, restore it on another device, or sign in so it follows you automatically.</p><div class="qz-act"><button class="qz-btn qz-pri" data-sync-open>Account and sync</button><button class="qz-btn" data-exp>Download backup</button><label class="qz-btn" style="cursor:pointer">Restore from file<input type="file" accept=".json,application/json" data-imp hidden></label></div><p class="qz-m" data-bk style="margin-top:8px" aria-live="polite"></p></div><div class="tn-blk"><button class="qz-btn" data-reset>Reset all saved progress</button> <span class="qz-m" data-rm></span></div>';
+  box.innerHTML=rh+'<div class="tn-blk"><h3>Your results by section</h3>'+h+'</div><div class="tn-blk"><h3>Level exams</h3>'+ex+'</div><div class="tn-blk"><h3>Streak and review</h3>'+sh+'</div><div class="tn-blk"><h3>Mistake log</h3>'+mh+(ids.length?'<div class="qz-wk"></div>':'')+'</div><div class="tn-blk"><h3>Backup and sync</h3><p class="qz-m">Download a copy of your progress, restore it on another device, or sign in so it follows you automatically.</p><div class="qz-act"><button class="qz-btn qz-pri" data-sync-open>Account and sync</button><button class="qz-btn" data-exp>Download backup</button><label class="qz-btn" style="cursor:pointer">Restore from file<input type="file" accept=".json,application/json" data-imp hidden></label></div><p class="qz-m" data-bk style="margin-top:8px" aria-live="polite"></p></div><div class="tn-blk"><button class="qz-btn" data-reset>Reset all saved progress</button> <span class="qz-m" data-rm></span></div>';
   if(ids.length){ var wk=box.querySelector(".qz-wk"); wk.className="qz qz-mist"; wk.setAttribute("data-ready","1"); wk.setAttribute("data-title","Practise my mistakes"); var qq=new Quiz(wk); var st=wk.querySelector("[data-start]"); if(st){ var base=due.length?due:ids; st.onclick=function(){ wk._start(base.slice(0,20).map(function(i){return Q[i];})); }; st.textContent=due.length?"Review "+Math.min(20,due.length)+" due now":"Practise "+Math.min(20,ids.length)+" of my mistakes";
     if(due.length&&ids.length>due.length){ var all=document.createElement("button"); all.type="button"; all.className="qz-btn"; all.textContent="Practise all "+Math.min(20,ids.length); all.onclick=function(){ wk._start(ids.slice(0,20).map(function(i){return Q[i];})); }; st.parentNode.appendChild(all); } } }
   var rb=box.querySelector("[data-reset]"), step=0;
