@@ -740,6 +740,26 @@ body.nv-lock{overflow:hidden}
 #tr-panel .tr-h:hover{background:rgba(255,255,255,.18)}
 #tr-panel button:focus-visible,#tr-panel a:focus-visible{outline:2px solid #FFD60A;outline-offset:2px}
 @media print{#tr-chip,#tr-panel{display:none}}
+#tr-panel{max-height:calc(100vh - 110px);max-height:calc(100dvh - 110px);overflow-y:auto;overscroll-behavior:contain}
+#tr-panel .tr-ana{margin-top:10px}
+#tr-panel .tr-ana[hidden]{display:none}
+#tr-panel .ana-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+#tr-panel .ana-c{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid #5A57A0;background:transparent;color:#D9DBFF;font-size:14px;font-weight:650}
+#tr-panel .ana-c.on{background:#FFD60A;border-color:#FFD60A;color:#14122B}
+#tr-panel .ana-hint{margin:2px 2px 6px;font-size:12.5px;color:#B9BCEB}
+#tr-panel .ana-i{background:rgba(255,255,255,.07);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+#tr-panel .ana-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+#tr-panel .ana-h b{font-size:19px;color:#FFD60A}
+#tr-panel .ana-t{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#B9BCEB}
+#tr-panel .ana-i p{margin:6px 0 0;font-size:14.5px;line-height:1.45;color:#fff}
+#tr-panel .ana-i p i{color:#D9DBFF}
+#tr-panel .ana-s{color:#D9DBFF !important;font-size:13.5px !important}
+#tr-panel .ana-f{font-size:13.5px !important;color:#B9BCEB !important}
+#tr-panel .ana-f b{color:#FFD60A}
+#tr-panel .ana-w{color:#FF8FBF !important;font-size:13px !important}
+#tr-panel .ana-b{margin-top:8px}
+#tr-panel .ana-b button{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #5A57A0;background:transparent;color:#fff;font-size:13px;font-weight:650}
+#tr-panel .ana-b button:hover{border-color:#FFD60A}
 </style></head>
 <body>
 <div class="topbar"><div class="wrap topbar-in">
@@ -2375,6 +2395,137 @@ else { try{localStorage.setItem(KEY,cur());}catch(e){} }
 ui();
 })();
 </script>
+<script id="ana-js">(function(){
+"use strict";
+/* Word analysis: what is this word? (verb form, noun, pronoun, preposition...) Works offline from the verb tables and vocabulary already in the page. */
+var TN={pres:"presente",impf:"imperfetto",prem:"passato remoto",fut:"futuro semplice",cond:"condizionale presente",cong:"congiuntivo presente",cgim:"congiuntivo imperfetto",inf:"infinito",ge:"gerundio",pp:"participio passato",imp:"imperativo"};
+var PERS=["io","tu","lui/lei","noi","voi","loro"], IMPP=["tu","Lei","noi","voi","Loro"];
+var PPV={o:"masc. sing.",a:"fem. sing.",i:"masc. plural",e:"fem. plural"};
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+function norm(w){ return String(w).toLowerCase().replace(/[‘’ʼ`´]/g,"'"); }
+function strip(s){ return s.normalize("NFD").replace(/[̀-ͯ]/g,""); }
+/* ---------- small words ---------- */
+var F={};
+function def(keys,title,text,sec){ keys.split(" ").forEach(function(k){ F[k]={t:title,x:text,s:sec||0}; }); }
+def("il","the (masculine singular)","Before most consonants: <b>il</b> libro, <b>il</b> caffè.");
+def("lo","lo: two different words","1) <b>the</b> (masc. sing.) before s+consonant, z, gn, ps, x, y: <i>lo studente, lo zaino</i>. 2) <b>direct pronoun</b>, him / it: <i>Lo vedo.</i> Before <i>ho, hai, ha…</i> it elides: <i>l'ho visto</i>.",5);
+def("la","la: the, or her / it","1) <b>the</b> (fem. sing.): <i>la casa</i>. 2) <b>direct pronoun</b>, her / it: <i>La vedo.</i> Elides before a vowel: <i>l'ho vista</i>.",5);
+def("l'","l': elided lo or la","<b>the</b> before a vowel (<i>l'amico, l'acqua</i>) or <b>him/her/it</b> before <i>ho, hai, ha…</i> (<i>l'ho visto</i>). <i>Li</i> and <i>le</i> never elide: <i>li ho visti, le ho viste</i>.",5);
+def("i","the (masculine plural)","Before most consonants: <b>i</b> libri, <b>i</b> bambini.");
+def("gli","gli: three jobs","1) <b>the</b> (masc. plural) before vowels, s+consonant, z: <i>gli amici</i>. 2) <b>indirect pronoun</b>, to him: <i>Gli parlo.</i> 3) Before lo/la/li/le/ne it fuses: <i>glielo, gliela, gliene</i>.",5);
+def("le","le: the, to her, or them","1) <b>the</b> (fem. plural): <i>le case</i>. 2) <b>indirect pronoun</b>, to her: <i>Le parlo.</i> 3) <b>direct pronoun</b>, them (fem.): <i>Le vedo.</i> It never elides: <i>le ho viste</i>.",5);
+def("li","li: them (masculine)","<b>Direct pronoun</b>, them (masc. plural): <i>Li vedo.</i> Never elides: <i>li ho visti</i>, not <i>l'ho visti</i>. (<i>lì</i> with the accent means <b>there</b>.)",5);
+def("un","un: a / an (masculine)","<i>un libro, un amico</i>. (Feminine before a vowel is <i>un'amica</i>.)");
+def("uno","uno: a / an, or one","<i>uno studente, uno zaino</i> (before s+consonant, z, gn, ps). Also the number <b>one</b>.");
+def("una un'","una / un': a / an (feminine)","<i>una casa</i>; before a vowel <i>un'amica</i> (with the apostrophe).");
+def("mi m'","mi: me / to me","Direct (<i>mi vedi</i>), indirect (<i>mi dai</i>) or reflexive (<i>mi lavo</i>). Before lo/la/li/le/ne it becomes <b>me</b>: <i>me lo dai</i>.",5);
+def("ti t'","ti: you / to you (tu)","Direct, indirect or reflexive: <i>ti vedo, ti scrivo, ti alzi</i>. Before lo/la/li/le/ne it becomes <b>te</b>: <i>te lo dico</i>.",5);
+def("ci c'","ci: four jobs","1) <b>us / to us</b>. 2) <b>there</b> (a place): <i>ci vado</i>. 3) <b>about/on it</b> with verbs taking <i>a</i>: <i>ci penso</i>. 4) in <b>c'è / ci sono</b> (there is / there are).",8);
+def("vi v'","vi: you / to you (voi)","Direct, indirect or reflexive: <i>vi vedo, vi scrivo</i>. Before lo/la/li/le/ne it becomes <b>ve</b>: <i>ve lo dico</i>.",5);
+def("si s'","si: oneself (and sì = yes)","Reflexive <b>himself / herself / themselves</b> (<i>si lava</i>), impersonal <b>one / you</b> (<i>si mangia bene</i>), passive (<i>si vende</i>). With the accent, <b>sì</b> means yes.",5);
+def("sì","sì: yes","The accent is what separates <b>sì</b> (yes) from <b>si</b> (pronoun).");
+def("ne n'","ne: of it, of them, some, about it","Replaces a quantity or <i>di</i> + noun: <i>Ne ho tre</i> (I have three of them), <i>Ne parlo</i> (I talk about it). In the passato prossimo the participle agrees with what <i>ne</i> stands for: <i>ne ho mangiate tre</i> (pizzas).",8);
+def("me","me: to me, or me","Stressed form after a preposition (<i>per me, con me</i>) and the form of <b>mi</b> before lo/la/li/le/ne: <i>me lo porta?</i> = will you bring it to me?",5);
+def("te","te: you (stressed), or ti before lo/la","<i>per te, con te</i>; and <b>ti</b> before lo/la/li/le/ne: <i>te lo dico</i>. With the accent, <b>tè</b> means tea.",5);
+def("tè","tè: tea","The accent separates <b>tè</b> (tea) from <b>te</b> (you).");
+def("ce","ce: ci before lo/la/li/le/ne","<i>Ce lo dai?</i> = will you give it to us? Also <i>ce n'è</i> / <i>ce ne sono</i>.",5);
+def("ve","ve: vi before lo/la/li/le/ne","<i>Ve lo spiego</i> = I explain it to you (plural).",5);
+def("glielo gliela glieli gliele gliene","gli/le + lo/la/li/le/ne, as one word","<b>glielo</b> = it to him/her/you (formal). One word, and it goes before the verb: <i>Glielo dico.</i> In compound tenses: <i>gliel'ho detto</i>. It never becomes <i>le lo</i> or <i>gli lo</i>.",5);
+def("loro","loro: they, or to them","Subject <b>they</b>, or indirect <b>to them</b> (formal, after the verb: <i>dico loro</i>; in speech usually <i>gli</i>). Also <i>il loro</i> = their.",5);
+def("io","io: I","Subject pronoun, normally dropped: <i>vado</i>, not <i>io vado</i>, unless you stress it.",5);
+def("tu","tu: you (informal)","Singular informal. Formal is <b>Lei</b>.",5);
+def("lui","lui: he","Subject pronoun, also stressed after prepositions: <i>con lui</i>.",5);
+def("lei","lei / Lei: she, or you (formal)","<b>lei</b> = she; <b>Lei</b> (capital) = formal singular you, with 3rd-person verbs: <i>Come sta, Lei?</i>",5);
+def("noi","noi: we","Subject pronoun.",5);
+def("voi","voi: you (plural)","Plural you, informal.",5);
+def("di d'","di: of, from, about","<i>la casa di Marco, sono di Roma, parlo di lavoro</i>. Elides to <b>d'</b>: <i>d'accordo</i>.",1);
+def("a","a: to, at, in (cities)","<i>vado a Roma, a casa, a scuola</i>. Before a vowel, <b>ad</b> is sometimes used: <i>ad esempio</i>.",1);
+def("da","da: from, at someone's, since","<i>vengo da Roma, vado da Marco, da tre anni</i>. With the accent, <b>dà</b> is the verb <i>dare</i> (he gives).",1);
+def("in","in: in, to (countries, vehicles)","<i>in Italia, in treno, in centro</i>.",1);
+def("con","con: with","<i>con te, con me</i>. Rarely fuses: <i>col, coi</i>.",1);
+def("su","su: on, about","<i>sul tavolo, su internet</i>.",1);
+def("per","per: for, through, in order to","<i>per te, per andare, per due ore</i>.",1);
+def("tra fra","tra / fra: between, among, in (future)","Identical meaning: <i>tra amici, tra due ore</i> (in two hours).",1);
+[["di","del dello della dell' dei degli delle","del=di+il, dello=di+lo, della=di+la, dell'=di+l', dei=di+i, degli=di+gli, delle=di+le"],
+ ["a","al allo alla all' ai agli alle","al=a+il, allo=a+lo, alla=a+la, all'=a+l', ai=a+i, agli=a+gli, alle=a+le"],
+ ["da","dal dallo dalla dall' dai dagli dalle","dal=da+il, dallo=da+lo, dalla=da+la, dall'=da+l', dai=da+i, dagli=da+gli, dalle=da+le"],
+ ["in","nel nello nella nell' nei negli nelle","nel=in+il, nello=in+lo, nella=in+la, nell'=in+l', nei=in+i, negli=in+gli, nelle=in+le"],
+ ["su","sul sullo sulla sull' sui sugli sulle","sul=su+il, sullo=su+lo, sulla=su+la, sull'=su+l', sui=su+i, sugli=su+gli, sulle=su+le"]].forEach(function(g){
+  g[1].split(" ").forEach(function(k){ F[k]={t:k+": "+g[0]+" + article, as one word",x:"Articulated preposition. "+esc(g[2])+".",s:1}; }); });
+F["col"]={t:"col: con + il",x:"<i>col suo amico</i>. Optional: <i>con il</i> is just as correct.",s:1}; F["coi"]={t:"coi: con + i",x:"<i>coi bambini</i>. Optional: <i>con i</i> is just as correct.",s:1};
+def("che","che: that, which, who, than, what","Relative (<i>il libro che leggo</i>), conjunction (<i>penso che sia</i>), <b>than</b> (<i>più alto che</i>…), and question word (<i>che cosa?</i>).",7);
+def("perché","perché: why / because","<i>Perché studi? Perché mi piace.</i> The accent goes on the final <b>é</b> (acute), never <i>perchè</i>.",7);
+def("perciò","perciò: therefore, so","A result, not a reason: <i>Piove, perciò resto a casa.</i> Do not confuse it with <i>perché</i>.",7);
+def("però","però: but, however","Stronger than <i>ma</i>, often after a pause: <i>È bello, però costa troppo.</i>",7);
+def("ma","ma: but","<i>Voglio andare, ma non posso.</i>",7);
+def("e ed","e / ed: and","<b>ed</b> only before a word starting with e: <i>ed ecco</i>. The accented <b>è</b> is the verb <i>to be</i>.",7);
+def("o","o: or","<i>tè o caffè?</i>");
+def("anche","anche: also, too, even","<i>Vengo anche io.</i>",6);
+def("già","già: already","<i>Ho già mangiato.</i> The accent is on the <b>à</b>.",6);
+def("ancora","ancora: still, yet, again","<i>È ancora presto. Non è ancora arrivato.</i>",6);
+def("mai","mai: ever, never","<i>Non vado mai</i> (I never go); <i>Sei mai stato a Roma?</i> (ever).",6);
+def("sempre","sempre: always","<i>Sempre</i> goes before the participle in compound tenses: <i>ho sempre studiato</i>.",6);
+def("po'","po': a little","Short for <i>poco</i>: <i>un po' di tempo</i>. The sign is an apostrophe, not an accent: <i>un po'</i>, never <i>un pò</i>.",6);
+def("lì là","lì / là: there","With the accent (<i>lì, là</i>) it means <b>there</b>; <b>li</b> without accent is the pronoun <i>them</i>.",6);
+def("qui qua","qui / qua: here","<i>Vieni qui!</i> No accent.",6);
+/* ---------- indexes ---------- */
+var idx=null, voc=null;
+function build(){
+  idx={ex:{},lo:{}}; var V=[]; try{ V=(typeof VERBS!=="undefined")?VERBS:[]; }catch(e){}
+  function add(form,rec){ if(!form) return; form=norm(form); (idx.ex[form]=idx.ex[form]||[]).push(rec); var l=strip(form); (idx.lo[l]=idx.lo[l]||[]).push(rec); }
+  V.forEach(function(v){
+    add(v.v,{v:v,k:"inf",p:-1,f:v.v});
+    if(v.pp){ var b=v.pp.replace(/o$/,""), isO=/o$/.test(v.pp); if(isO) ["o","a","i","e"].forEach(function(e){ add(b+e,{v:v,k:"pp",p:e,f:b+e}); }); else add(v.pp,{v:v,k:"pp",p:"",f:v.pp}); }
+    if(v.ge) add(v.ge,{v:v,k:"ge",p:-1,f:v.ge});
+    Object.keys(v.t||{}).forEach(function(k){ v.t[k].forEach(function(f,i){ add(f,{v:v,k:k,p:i,f:f}); }); });
+    (v.im||[]).forEach(function(f,i){ add(f,{v:v,k:"imp",p:i,f:f}); });
+  });
+}
+function vocab(){
+  if(voc) return voc; voc={};
+  [].forEach.call(document.querySelectorAll(".vc-w"),function(w){
+    var a=w.querySelector(".vc-a"), it=w.querySelector(".it"), en=w.querySelector(".vc-en"); if(!it||!en) return;
+    var key=norm(it.textContent.trim()); if(!key||/\s/.test(key)) return;
+    var art=a?a.textContent.trim():""; (voc[key]=voc[key]||[]).push({art:art,en:en.textContent.trim(),fem:/f\b/.test((w.querySelector(".vc-it")||{}).className||"")});
+  });
+  return voc;
+}
+var CL={glielo:"it to him/her",gliela:"it to him/her",glieli:"them to him/her",gliele:"them to him/her",gliene:"some of it to him/her",melo:"it to me",mela:"it to me",meli:"them to me",mele:"them to me",mene:"some to me",telo:"it to you",tela:"it to you",teli:"them to you",tele:"them to you",tene:"some to you",celo:"it to us",cela:"it to us",celi:"them to us",cele:"them to us",cene:"some to us",velo:"it to you (pl.)",vela:"it to you (pl.)",veli:"them to you (pl.)",vele:"them to you (pl.)",vene:"some to you (pl.)",sene:"some of it (oneself)",mi:"me",ti:"you",ci:"us / there",vi:"you (pl.)",si:"oneself",lo:"him / it",la:"her / it",li:"them (masc.)",le:"them (fem.)",ne:"some / of it",gli:"to him"};
+var CLK=Object.keys(CL).sort(function(a,b){return b.length-a.length;});
+/* ---------- public: tokens and analysis ---------- */
+function tokens(text){ var m=String(text).match(/\p{L}+['’](?=\p{L})|\p{L}+['’]?/gu)||[]; return m.map(function(t){return t.replace(/’/g,"'");}); }
+function persLabel(r){ if(r.k==="imp") return IMPP[r.p]; if(r.k==="pp") return PPV[r.p]||""; if(r.p>=0) return PERS[r.p]; return ""; }
+function verbHtml(v,recs,loose){
+  var by={}; recs.forEach(function(r){ (by[r.k]=by[r.k]||[]).push(r); });
+  var rows=Object.keys(by).map(function(k){
+    var rs=by[k], ps=rs.map(persLabel).filter(Boolean).filter(function(x,i,a){return a.indexOf(x)===i;});
+    return TN[k]+(ps.length?" ("+ps.join(", ")+")":""); });
+  var h='<div class="ana-i"><div class="ana-h"><b>'+esc(recs[0].f)+'</b><span class="ana-t">verb form</span></div>';
+  h+='<p><b>'+esc(v.v)+'</b> <i>('+esc(v.e)+')</i></p><p class="ana-s">'+esc(rows.join(" · "))+'</p>';
+  if(loose) h+='<p class="ana-w">Check the accent: you typed it without one, and this is the form with an accent.</p>';
+  var r0=recs[0];
+  if(r0.k==="pp"){ var aux=v.a==="essere"?"sono "+v.pp+"/"+v.pp.replace(/o$/,"a"):"ho "+v.pp; h+='<p class="ana-s">Passato prossimo: <b>'+esc(aux)+'</b> · auxiliary: '+esc(v.a)+(v.a==="essere"?" (participle agrees with the subject)":"")+'</p>'; }
+  if(v.v==="avere"||v.v==="essere"){ if(by.pres) h+='<p class="ana-s">Also the helper verb of the passato prossimo: <i>'+(v.v==="avere"?"ho mangiato":"sono andato")+'</i>.</p>'; }
+  var tk=r0.k; if(v.t&&v.t[tk]) h+='<p class="ana-f">'+v.t[tk].map(function(f,i){ return (f===r0.f&&recs.some(function(r){return r.p===i;}))?"<b>"+esc(f)+"</b>":esc(f); }).join(" · ")+'</p>';
+  if(v.n) h+='<p class="ana-s">'+esc(v.n)+'</p>';
+  h+='<div class="ana-b"><button type="button" data-ov="'+esc(v.v)+'">Open '+esc(v.v)+' in the verb library</button></div></div>';
+  return h;
+}
+function analyse(w){
+  if(!idx) build(); w=norm(w); var out="", found=false;
+  var f=F[w]; if(f){ found=true; out+='<div class="ana-i"><div class="ana-h"><b>'+esc(w)+'</b><span class="ana-t">'+esc(f.t)+'</span></div><p>'+f.x+'</p>'+(f.s?'<div class="ana-b"><button type="button" data-os="'+f.s+'">Open the section</button></div>':'')+'</div>'; }
+  var hits=idx.ex[w], loose=false; if(!hits&&!f){ hits=idx.lo[strip(w)]; loose=!!hits; }
+  if(hits){ found=true; var byV={}, order=[]; hits.forEach(function(r){ if(!byV[r.v.v]){ byV[r.v.v]=[]; order.push(r.v); } byV[r.v.v].push(r); });
+    order.slice(0,4).forEach(function(v){ out+=verbHtml(v,byV[v.v],loose); }); }
+  var vv=vocab()[w]; if(vv){ found=true; vv.forEach(function(e){ out+='<div class="ana-i"><div class="ana-h"><b>'+esc((e.art?e.art+" ":"")+w)+'</b><span class="ana-t">noun / word</span></div><p>'+esc(e.en)+'</p><div class="ana-b"><button type="button" data-os="18">Open vocabulary</button></div></div>'; }); }
+  if(!found){ /* infinitive + attached pronoun: accompagnarli, vederlo, dirglielo */
+    for(var i=0;i<CLK.length&&!found;i++){ var c=CLK[i]; if(w.length>c.length+3&&w.slice(-c.length)===c){ var rest=w.slice(0,-c.length), inf=rest+"e", vh=idx.ex[inf]; if(vh&&vh[0].k==="inf"){ found=true; out+='<div class="ana-i"><div class="ana-h"><b>'+esc(w)+'</b><span class="ana-t">infinitive + pronoun</span></div><p><b>'+esc(inf)+'</b> + <b>'+esc(c)+'</b> <i>('+esc(CL[c])+')</i></p><p class="ana-s">The final -e of the infinitive drops when the pronoun is attached.</p></div>'+verbHtml(vh[0].v,[vh[0]],false); } } }
+  }
+  return found?out:'<div class="ana-i"><p class="ana-s">“'+esc(w)+'” is not in the verb tables or vocabulary list. It may be a noun or adjective that is not listed; try Google Translate below.</p></div>';
+}
+window.__ana={tokens:tokens,analyse:analyse};
+})();
+</script>
 <script id="tr-js">(function(){
 "use strict";
 /* Translator: select text -> "Translate" chip -> floating panel -> Google Translate in a small popup window.
@@ -2432,10 +2583,21 @@ function renderHist(){
     list.appendChild(b);
   });
 }
+var anaSel="", anaT=null;
+function anaUpdate(){
+  var box=$(".tr-ana",panel); if(!box) return;
+  var A=window.__ana, l=langs()[0], toks=(A&&l==="it")?A.tokens(ta.value):[];
+  if(!toks.length||toks.length>14){ box.hidden=true; box.textContent=""; return; }
+  var w=toks.length===1?toks[0]:(toks.indexOf(anaSel)>-1?anaSel:""), h="";
+  if(toks.length>1){ h+='<div class="ana-chips" role="group" aria-label="Words">'; toks.forEach(function(t,i){ h+='<button type="button" class="ana-c'+(t===w?" on":"")+'" data-w="'+t.replace(/"/g,"")+'">'+t.replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</button>'; }); h+='</div>'; if(!w) h+='<p class="ana-hint">Tap a word to see what it is.</p>'; }
+  if(w) h+=A.analyse(w);
+  box.innerHTML=h; box.hidden=false;
+}
+function anaSoon(){ clearTimeout(anaT); anaT=setTimeout(anaUpdate,200); }
 function openPanel(text){
   hideChip();
   if(typeof text==="string"&&text) ta.value=text.slice(0,900); else if(text==="") ta.value="";
-  panel.hidden=false; refreshLink(); renderHist();
+  anaSel=""; panel.hidden=false; refreshLink(); renderHist(); anaUpdate();
   if(!ta.value) { try{ ta.focus(); }catch(e){} }
 }
 function closePanel(){ if(panel&&!panel.hidden){ panel.hidden=true; evalSel(); } }
@@ -2460,17 +2622,24 @@ function build(){
   chip.addEventListener("click",function(){ openPanel(lastSel); });
   document.body.appendChild(chip);
   panel=document.createElement("div"); panel.id="tr-panel"; panel.hidden=true; panel.setAttribute("role","dialog"); panel.setAttribute("aria-label","Translate");
-  panel.innerHTML='<div class="tr-head"><b>Translate</b><button type="button" class="tr-dir" aria-label="Swap translation direction"><span class="tr-from">Italian</span> → <span class="tr-to">English</span> <i>⇄</i></button><button type="button" class="tr-x" aria-label="Close translator">×</button></div>'+
+  panel.innerHTML='<div class="tr-head"><b>Translate &amp; analyse</b><button type="button" class="tr-dir" aria-label="Swap translation direction"><span class="tr-from">Italian</span> → <span class="tr-to">English</span> <i>⇄</i></button><button type="button" class="tr-x" aria-label="Close translator">×</button></div>'+
    '<textarea id="tr-text" rows="3" maxlength="900" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>'+
+   '<div class="tr-ana" hidden></div>'+
    '<div class="tr-acts"><a id="tr-go" class="tr-primary" href="#" target="gtranslate" rel="noopener">Google Translate ↗</a><button type="button" id="tr-say">Listen</button><button type="button" id="tr-copy">Copy</button></div>'+
    '<p class="tr-note">Opens in a small window (a new tab on phones). Google Translate has its own Italian audio.</p>'+
    '<div class="tr-hist" hidden><span>Recent</span><div class="tr-hl"></div></div>';
   document.body.appendChild(panel);
   ta=$("#tr-text",panel); go=$("#tr-go",panel);
-  ta.addEventListener("input",function(){ go.href=url(ta.value); });
+  ta.addEventListener("input",function(){ go.href=url(ta.value); anaSoon(); });
+  panel.addEventListener("click",function(e){
+    var c=e.target.closest?e.target.closest(".ana-c"):null; if(c){ anaSel=c.getAttribute("data-w"); anaUpdate(); return; }
+    var v=e.target.closest?e.target.closest("[data-ov]"):null, o=e.target.closest?e.target.closest("[data-os]"):null;
+    if(v){ var name=v.getAttribute("data-ov"); closePanel(); if(typeof show==="function") show(15); setTimeout(function(){ var q=document.getElementById("vq"); if(q){ q.value=name; q.dispatchEvent(new Event("input",{bubbles:true})); var b=[].filter.call(document.querySelectorAll("#vlist .vbtn"),function(x){ var t=x.querySelector("b"); return t&&t.textContent===name; })[0]; if(b) b.click(); var card=document.getElementById("vcard"); if(card) card.scrollIntoView({behavior:"smooth",block:"start"}); } },80); }
+    else if(o){ var n=o.getAttribute("data-os"); closePanel(); if(typeof show==="function") show(n); }
+  });
   go.addEventListener("click",launch);
   $(".tr-x",panel).addEventListener("click",closePanel);
-  $(".tr-dir",panel).addEventListener("click",function(){ dir=dir==="it-en"?"en-it":"it-en"; refreshLink(); });
+  $(".tr-dir",panel).addEventListener("click",function(){ dir=dir==="it-en"?"en-it":"it-en"; refreshLink(); anaUpdate(); });
   $("#tr-say",panel).addEventListener("click",function(){ var t=ta.value.trim(); if(t&&typeof window.__itSay==="function") window.__itSay(t); });
   $("#tr-copy",panel).addEventListener("click",copy);
   panel.addEventListener("keydown",function(e){ if(e.key==="Escape"){ e.preventDefault(); closePanel(); } });
